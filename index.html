@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>卡牌遊戲</title>
+    <style>
+        #game {
+        width: 70%;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .cards {
+        width: 100px;
+        height: 180px;
+        position: relative;
+        float: left;
+        margin: 2.5px;
+        /* 設定子元素在3D空間內 */
+        transform-style: preserve-3d;
+        transition: 1s;
+      }
+      .card-front {
+        width: 100%;
+        height: 100%;
+        background-image: url("./cards_img/1H.jpg");
+        background-repeat: no-repeat;
+        background-size: contain;
+        background-position: center;
+        position: absolute;
+        /* 隱藏背面 */
+        backface-visibility: hidden;
+      }
+      .card-back {
+        width: 100%;
+        height: 100%;
+        background-image: url("./cards_img/Red_back.jpg");
+        background-repeat: no-repeat;
+        background-size: contain;
+        background-position: center;
+        position: absolute;
+        /* 隱藏背面 */
+        backface-visibility: hidden;
+        transform: rotateY(180deg);
+      }
+      .card-close {
+        /* transform: rotateY(180deg); */
+      }
+      .dealer{
+        position: absolute;
+        right: 15%;
+        top: 15%; 
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 翻牌遊戲 -->
+    <!-- 卡牌邏輯：兩張卡牌疊再一起，背面都 hidden -->
+    <div id="game"></div>
+    </div>
+    <script src="./jquery-2.1.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+    <script>
+    /* 老師版本翻牌遊戲開發邏輯
+    1.創建一張卡牌，該卡牌可以達到翻面功能 (使用CSS的transform-style: preserve-3d效果達到)，卡牌中包裹正面背面元素，點擊觸發rotateY軸效果
+    2.遍歷所需卡牌數量次數，使用append('element')將卡牌元素插入到頁面遊戲區中
+    3.遍歷卡牌，將其front-card的background-image屬性更改，改為不同的圖樣，並給與相同值的卡片相同的編號(消除時識別用)
+    4.製作隨機參數，遍歷卡牌，將隨機的第N張卡片，插入在遍歷卡牌的第i張後。
+    5.增加點擊事件，點擊卡片翻開卡片，並移除card-close屬性，並給予card-open屬性
+    6.若card-open屬性 = 2 則開始判斷是否修除獲再蓋回去
+      6.1 2張卡牌值編號相同，則給予2張圖fadeto transparent的效果，並移除card-open屬性 + 給予 card-ok屬性，分數 + 1 
+      6.2 2張卡牌值編號不同，則將牌翻回去，並將card-close屬性加回去
+    7.當 card-ok屬性 / 當時間歸零 = 卡片數量則遊戲結束
+    8.若當場分數 > 最高分：則跳出輸入player id + 紀錄該分數，將player id + 分數存入 localStroage
+
+    其餘細節：
+    1.打開網頁時，先讀取 localStroage 抓出歷史最高分的player id + 分數，若沒有人的話則默認為0和 nobody
+    2.遊戲開始按鈕點擊下後，剩餘時間恢復預設、分數歸零
+    3.全部牌出現(透明度歸零)、所有牌加上.card-close屬性，移除card-ok屬性
+
+    改為牌比大小遊戲開發邏輯：
+    1.創建一張卡牌，該卡牌可以達到翻面功能 (使用CSS的transform-style: preserve-3d效果達到)，卡牌中包裹正面背面元素，點擊觸發rotateY軸效果
+    2.遍歷所需卡牌數量次數，使用append('element')將卡牌元素插入到頁面遊戲區中
+    3.遍歷卡牌，將其front-card的background-image屬性更改，改為不同的圖樣，並給與相同值的卡片相同的編號(消除時識別用)
+    4.製作隨機參數，遍歷卡牌，將隨機的第N張卡片，插入在遍歷卡牌的第i張後。
+    5.莊家發出一張隨機的卡，蓋著的卡(具有card-close屬性)
+    6.增加點擊事件，點擊卡片翻開卡片，並移除card-close屬性，並給予card-open屬性，並比較點擊卡片的 num值與莊家發出的num相比誰比較大
+    7.給予被點擊的牌fadeto transparent的效果，並移除card-open屬性 + 給予 card-ok屬性
+      7.1 如果我方num > 莊家，分數 + 1 sweetAlert(You win)
+      7.2 如果我方num < 莊家，分數 - 1 sweetAlert(You Lose)
+    8.當 card-ok屬性 = 卡片數量 / 當時間歸零時遊戲結束
+    8.若當場分數 > 最高分：則跳出輸入player id + 紀錄該分數，將player id + 分數存入 localStroage
+    
+    *
+    增值功能：
+    1. 光頭哥哥的紅心A，點擊莊家的褲子5次以上，可以觸發下次對決牌為紅心A
+    2. 籌碼玩法：玩家和莊家有一個初始籌碼量(例如：100)，每次出牌前可以下注，獲勝的話則獲得2倍的籌碼分數
+    3. 籌法玩法加強，在下注前可以選擇難度：
+      3.1 簡易玩法：機率倍率不變，勝利籌碼 * 2
+      3.2 中等玩法：機率倍率變難，50%的機率抽到 3-8，50%的機率抽到其他，勝利籌碼 * 5
+      3.3 困難玩法：機率倍率更難，70%的機率抽到 3-8，30%的機率抽到其他，勝利籌碼 * 10
+
+    */
+   //創造16張卡片
+    for (let i = 0; i < 21; i++) {
+       $("#game").append(`
+       <div class="cards card-close">
+        <div class="card-front"></div>
+        <div class="card-back"></div>        
+        </div>
+       `)
+    }
+    //遍歷全部卡片：換圖、加屬性、打亂
+    for(let i = 0 ; i < 21 ; i++){
+      const num = i % 8 +1 
+      //將16張牌改成2組1-8
+      $('.cards').eq(i).find('.card-front').css('background-image',`url(./cards_img/${0+num}H.jpg)`)
+      //給圖片加上編號屬性
+      $(".cards").eq(i).attr("data-num", num);
+      //給圖片打亂
+      let random = Math.round( Math.random()*15)
+      $(".cards").eq(random).insertAfter($('.cards').eq(i))
+    }
+   
+    $("body").append(`
+       <div class="cards card-close dealer">
+        <div class="card-front"></div>
+        <div class="card-back"></div>        
+        </div>
+       `)
+   
+   
+   </script>
+  </body>
+</html>
