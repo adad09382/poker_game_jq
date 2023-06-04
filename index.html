@@ -45,7 +45,7 @@
         transform: rotateY(180deg);
       }
       .card-close {
-        /* transform: rotateY(180deg); */
+        transform: rotateY(180deg);
       }
       .dealer{
         position: absolute;
@@ -104,8 +104,12 @@
       3.3 困難玩法：機率倍率更難，70%的機率抽到 3-8，30%的機率抽到其他，勝利籌碼 * 10
 
     */
-   //創造16張卡片
-    for (let i = 0; i < 21; i++) {
+    //遊戲時間 + 分數設置
+    let time = 50;
+    let score = 0;
+    let highestScore = 0
+    //創造16張卡片
+    for (let i = 0; i < 26; i++) {
        $("#game").append(`
        <div class="cards card-close">
         <div class="card-front"></div>
@@ -114,25 +118,97 @@
        `)
     }
     //遍歷全部卡片：換圖、加屬性、打亂
-    for(let i = 0 ; i < 21 ; i++){
-      const num = i % 8 +1 
-      //將16張牌改成2組1-8
+    for(let i = 0 ; i < 28 ; i++){
+      const num = i % 13 + 2
+      //將26張牌改成2組1-13
       $('.cards').eq(i).find('.card-front').css('background-image',`url(./cards_img/${0+num}H.jpg)`)
       //給圖片加上編號屬性
       $(".cards").eq(i).attr("data-num", num);
       //給圖片打亂
-      let random = Math.round( Math.random()*15)
+      let random = Math.round( Math.random()*25)
       $(".cards").eq(random).insertAfter($('.cards').eq(i))
     }
-   
+    //莊家的卡
     $("body").append(`
        <div class="cards card-close dealer">
         <div class="card-front"></div>
         <div class="card-back"></div>        
         </div>
-       `)
+    `)
+    //給莊家隨機的卡
+    let dealerRandom = Math.floor( Math.random()* 13 + 2)
+    $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+    $(".dealer").attr("data-num", dealerRandom);
+
+    //給遊戲區中的cards增加點擊翻開判定
+    $("#game").on('click','.cards',function(){
+      //如果這張牌還沒翻開
+      if($(this).hasClass('card-close') && 
+      //如果這張牌還沒消失
+      !$(this).hasClass('card-ok')
+      ) {
+        $(this).removeClass('card-close')
+        $(this).addClass('card-ok')
+        compare($(this))
+        $(this).fadeTo(1000, 0)
+        if($('.card-ok').length == 26){
+          endGame()
+    }
+      }
+    })
    
+   function compare(choseCard){
+    $('.dealer').removeClass('card-close')
+    if(Number(choseCard.attr("data-num")) > Number($(".dealer").attr("data-num"))) {
+      console.log('玩家點數是'+ choseCard.attr("data-num") + '莊家點數是'+ $(".dealer").attr("data-num"));
+      score++
+      console.log('玩家獲勝，分數+1，現在分數是'+score);
+      //莊家牌蓋起
+      //改起1秒後莊家換新牌
+      setTimeout(()=>{
+        $('.dealer').addClass('card-close')
+        setTimeout(()=>{
+          dealerRandom = Math.floor( Math.random()* 13 + 2)
+          $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+          $(".dealer").attr("data-num", dealerRandom);
+          console.log(`新的莊家牌是${dealerRandom}`);
+        },500)
+      },1000)
+    } else if(Number(choseCard.attr("data-num")) == Number($(".dealer").attr("data-num"))) {
+      console.log('玩家點數是'+ choseCard.attr("data-num") + '莊家點數是'+ $(".dealer").attr("data-num"));
+      console.log('平手，分數不變，現在分數是'+score);
+      //莊家牌蓋起
+      //改起1秒後莊家換新牌
+      setTimeout(()=>{
+        $('.dealer').addClass('card-close')
+        setTimeout(()=>{
+          dealerRandom = Math.floor( Math.random()* 13 + 2)
+          $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+          $(".dealer").attr("data-num", dealerRandom);
+          console.log(`新的莊家牌是${dealerRandom}`);
+        },500)
+      },1000)
+    } else {
+      console.log('玩家點數是'+ choseCard.attr("data-num") + '莊家點數是'+ $(".dealer").attr("data-num"));
+      score--
+      console.log('玩家落敗，分數-1，現在分數是'+score);
+      //莊家牌蓋起
+      //改起1秒後莊家換新牌
+      setTimeout(()=>{
+        $('.dealer').addClass('card-close')
+        setTimeout(()=>{
+          dealerRandom = Math.floor( Math.random()* 13 + 2)
+          $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+          $(".dealer").attr("data-num", dealerRandom);
+          console.log(`新的莊家牌是${dealerRandom}`);
+        },500)
+      },1000)
+    }
+  }
    
+   function endGame(){
+    alert('遊戲結束')
+   }
    </script>
   </body>
 </html>
