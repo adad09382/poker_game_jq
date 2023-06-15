@@ -14,50 +14,21 @@
         background-position: center;
         width: 98.5vw;
         height: 98vh;
-
       }
         #game {
         width: 70%;
         height: 80%;
         display: flex;
         flex-wrap: wrap;
-        position: static;
-        z-index: 2;
-        pointer-events: auto;
       }
       #scoreborder{
         width: 100%;
         height: 20%;
-        display: flex;
         background-color: rgba(0,0,0,0.8);
-        position: static;
-        z-index: 5;
-   
-      }
-      #coins {
-        width: 70%;
-        height: 100%;
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-
-      }
-      #chips{
-        font-size: 2rem;
-        color: #fff;
-        padding-top: 1rem;
-        text-align: center;
-
-      }
-      .bet-btn-img {
-        width: 100px;
-        height: 100px;
       }
       .cards {
-        width: 11.5%;
-        height: 30%;
-        /* width: 150px;
-        height: 240px; */
+        width: 150px;
+        height: 240px;
         position: relative;
         float: left;
         margin: 2.5px;
@@ -102,26 +73,7 @@
     <!-- 翻牌遊戲 -->
     <!-- 卡牌邏輯：兩張卡牌疊再一起，背面都 hidden -->
     <div id="game"></div>
-    <div id="scoreborder">
-      <div id="coins">      
-        <img class="coin" data-coin="5" src="./cards_img/Coin5.gif" alt="">
-        <img class="coin" data-coin="10" src="./cards_img/Coin10.gif" alt="">
-        <img class="coin" data-coin="20" src="./cards_img/Coin20.gif" alt="">
-        <img class="coin" data-coin="50" src="./cards_img/Coin50.gif" alt="">
-        <img class="coin" data-coin="100" src="./cards_img/Coin100.gif" alt="">
-        <img class="coin" data-coin="200" src="./cards_img/Coin200.gif" alt="">
-        <img class="coin" data-coin="500" src="./cards_img/Coin500.gif" alt="">
-        <img class="coin" data-coin="1000" src="./cards_img/Coin1000.gif" alt="">
-      </div>
-      <div id="chips">
-        目前持有籌碼：<span>0</span>；
-        已下注籌碼：<span>0</span>
-        <br>
-        <img class="bet-btn-img" src="./cards_img/betDone.gif" alt="">
-        <img class="bet-btn-img" src="./cards_img/betReset.gif" alt="">
-      </div>
-
-    </div>
+    <div id="scoreborder"></div>
     </div>
     <script src="./jquery-2.1.4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -152,14 +104,11 @@
     4.製作隨機參數，遍歷卡牌，將隨機的第N張卡片，插入在遍歷卡牌的第i張後。
     5.莊家發出一張隨機的卡，蓋著的卡(具有card-close屬性)
     6.增加點擊事件，點擊卡片翻開卡片，並移除card-close屬性，並給予card-open屬性，並比較點擊卡片的 num值與莊家發出的num相比誰比較大
-    7.下注階段，需判斷是否"下注狀態 = true"，若下注狀態 = false 時無法點擊card。
-      7.1 點擊籌碼可下注對應的額度，但如果玩家所持有的籌碼 < 下注額度，則無法下注
-      7.2 下注完成點擊下注完畢BTN，讓下注狀態 = true，另外下注金額 = 0 的時候，完畢BTN無法點擊(disable)
-    8.給予被點擊的牌fadeto transparent的效果，並移除card-open屬性 + 給予 card-ok屬性
-      8.1 如果我方num > 莊家，玩家所持有的籌碼 + 下注金額 sweetAlert(You win)
-      8.2 如果我方num < 莊家，玩家所持有的籌碼 - 下注金額 sweetAlert(You Lose)
-    9.玩家所持有的籌碼 = 0 時遊戲結束
-    10.若當場分數 > 最高分：則跳出輸入player id + 紀錄該分數，將player id + 分數存入 localStroage
+    7.給予被點擊的牌fadeto transparent的效果，並移除card-open屬性 + 給予 card-ok屬性
+      7.1 如果我方num > 莊家，分數 + 1 sweetAlert(You win)
+      7.2 如果我方num < 莊家，分數 - 1 sweetAlert(You Lose)
+    8.當 card-ok屬性 = 卡片數量 / 當時間歸零時遊戲結束
+    8.若當場分數 > 最高分：則跳出輸入player id + 紀錄該分數，將player id + 分數存入 localStroage
     
     *
     增值功能：
@@ -174,12 +123,7 @@
     //遊戲時間 + 分數設置
     let time = 50;
     let score = 0;
-    let highestScore = 0;
-    //設定籌碼
-    let betState = false; //下注狀態
-    let holdBet = 1000;   //目前持有籌碼
-    let userBet = 0;      //本局下注籌碼
-
+    let highestScore = 0
     //創造16張卡片
     for (let i = 0; i < 26; i++) {
        $("#game").append(`
@@ -220,8 +164,6 @@
     $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
     $(".dealer").attr("data-num", dealerRandom);
 
-    //籌碼設定
-
     //給遊戲區中的cards增加點擊翻開判定
     $("#game").on('click','.cards',function(){
       //如果這張牌還沒翻開
@@ -248,12 +190,28 @@
       //莊家牌蓋起
       //改起1秒後莊家換新牌
       changeCard()
+      // setTimeout(()=>{
+      //   setTimeout(()=>{
+      //     dealerRandom = Math.floor( Math.random()* 13 + 2)
+      //     $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+      //     $(".dealer").attr("data-num", dealerRandom);
+      //     console.log(`新的莊家牌是${dealerRandom}`);
+      //   },500)
+      // },1000)
     } else if(Number(choseCard.attr("data-num")) == Number($(".dealer").attr("data-num"))) {
       console.log('玩家點數是'+ choseCard.attr("data-num") + '莊家點數是'+ $(".dealer").attr("data-num"));
       console.log('平手，分數不變，現在分數是'+score);
       //莊家牌蓋起
       //改起1秒後莊家換新牌
       changeCard()
+      // setTimeout(()=>{
+      //   setTimeout(()=>{
+      //     dealerRandom = Math.floor( Math.random()* 13 + 2)
+      //     $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+      //     $(".dealer").attr("data-num", dealerRandom);
+      //     console.log(`新的莊家牌是${dealerRandom}`);
+      //   },500)
+      // },1000)
     } else {
       console.log('玩家點數是'+ choseCard.attr("data-num") + '莊家點數是'+ $(".dealer").attr("data-num"));
       score--
@@ -261,24 +219,28 @@
       //莊家牌蓋起
       //改起1秒後莊家換新牌
       changeCard()
+      // setTimeout(()=>{
+      //   setTimeout(()=>{
+      //     dealerRandom = Math.floor( Math.random()* 13 + 2)
+      //     $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
+      //     $(".dealer").attr("data-num", dealerRandom);
+      //     console.log(`新的莊家牌是${dealerRandom}`);
+      //   },500)
+      // },1000)
     }
   }
   function changeCard(){
-    //將牌向右移走
-    $(".dealer").css('transform','translateX(300%)')
-    $("body").css("overflow","hidden")
+    //將牌向上移走
+    $(".dealer").css('transform','translateY(-250%)')
     setTimeout(()=>{
       //卡牌數值變換
       dealerRandom = Math.floor( Math.random()* 13 + 2)
       $(".dealer").find('.card-front').css('background-image',`url(./cards_img/${0+dealerRandom}H.jpg)`)
       $(".dealer").attr("data-num", dealerRandom);
       console.log('第一階段動畫完成，卡片淡出+移出畫面 + 更改卡片數字');
-      $(".dealer").css('transform','translateX(0%)')
+      $(".dealer").css('transform','translateY(0%)')
       console.log( '第二階段動畫完成，卡片移入畫面 ');
-      setTimeout(()=>{
-        $("body").css("overflow","auto")
-      },500)
-    },450)
+    },1000)
 
     }
     // 牌移出畫面
