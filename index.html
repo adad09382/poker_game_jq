@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <title>卡牌遊戲</title>
     <style>
       body{
@@ -12,13 +13,17 @@
         background-repeat: no-repeat;
         background-size:  100%;
         background-position: center;
-        width: 98.5vw;
-        height: 98vh;
-
+        width: 99vw;
+        height: 97vh;
+      
+       #container{
+        width: 100%;
+        height: 100%;
+       }
       }
         #game {
-        width: 70%;
-        height: 80%;
+        width: 75%;
+        height: 75%;
         display: flex;
         flex-wrap: wrap;
         position: static;
@@ -27,31 +32,32 @@
       }
       #scoreborder{
         width: 100%;
-        height: 20%;
+        height: 25%;
         display: flex;
         background-color: rgba(0,0,0,0.8);
-        position: static;
-        z-index: 5;
+
    
       }
       #coins {
-        /* width: 70%; */
+        width: 70%;
         height: 100%;
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
-
+      .coin{
+        width: 12.5%;
+        height: 80%;
+      }
       }
       #chips{
-        font-size: 1.75rem;
         color: #fff;
+        margin-left: 3rem;
         padding-top: 1rem;
         text-align: center;
-
       }
       .bet-btn-img {
-        width: 100px;
-        height: 100px;
+        width: 30%;
+        height: 70%;
       }
       .cards {
         width: 11.5%;
@@ -63,6 +69,11 @@
         margin: 2.5px;
         /* 設定子元素在3D空間內 */
         transform-style: preserve-3d;
+        transition: 1s;
+      }
+      .dealer-cards{
+        width: 11.5%;
+        height: 30%;
         transition: 1s;
       }
       .card-front {
@@ -96,9 +107,21 @@
         right: 15%;
         top: 35%; 
       }
+      .align-left {
+        text-align: left;
+      }
     </style>
   </head>
   <body>
+    <div id="container">
+      <span class="info" style="color:#fff ; position: fixed; right: 1.5%;">遊戲說明
+        <i  class="fa-sharp fa-solid fa-circle-info"></i>
+      </span>
+      <span style="color:#fff ; position: fixed; right: 15% ;">曾最高籌碼數：
+        <span id="highestHoldBet"></span><br>
+        最高籌碼玩家：<span id="highestPlayer"></span>
+      </span>
+      
     <!-- 翻牌遊戲 -->
     <!-- 卡牌邏輯：兩張卡牌疊再一起，背面都 hidden -->
     <div id="game"></div>
@@ -121,6 +144,7 @@
         <img class="bet-btn-img" id="betReset" src="./cards_img/betReset.gif" alt="">
       </div>
 
+    </div>
     </div>
     </div>
     <script src="./jquery-2.1.4.min.js"></script>
@@ -174,46 +198,29 @@
 
     */
     //遊戲時間 + 分數設置
-    let time = 50;
-    let score = 0;
-    let highestScore = 0;
+    // let time = 50;
+    // let score = 0;
+    // let highestScore = 0;
     //設定籌碼
     let betState = true; //下注狀態
     let holdBet = 1000;   //目前持有籌碼
     let userBet = 0;      //本局下注籌碼
-
-
-    //創造16張卡片
-    for (let i = 0; i < 26; i++) {
-       $("#game").append(`
-       <div class="cards card-close">
-        <div class="card-front"></div>
-        <div class="card-back"></div>        
-        </div>
-       `)
-    }
-    //遍歷全部卡片：換圖、加屬性、打亂
-    for(let i = 0 ; i < 28 ; i++){
-      const num = i % 13 + 2
-      //將26張牌改成2組1-13
-      $('.cards').eq(i).find('.card-front').css('background-image',`url(./cards_img/${0+num}H.jpg)`)
-      //給圖片加上編號屬性
-      $(".cards").eq(i).attr("data-num", num);
-      //給圖片打亂
-      let random = Math.round( Math.random()*25)
-      $(".cards").eq(random).insertAfter($('.cards').eq(i))
-    }
-    //隨機移除2張卡
-    for(let j = 0 ; j < 2; j++){
-      let removeRandom =  Math.round( Math.random()*2)
-      $(".cards").eq(removeRandom).remove() ;
-      console.log('移除了一個element');
-    }
+    //設定最高分
+    const highestHoldBet = localStorage.bet ? JSON.parse(localStorage.bet) : { name: '沒有人', holdBet: 0 }
+    let hightBetTemp = highestHoldBet.holdBet  //暫存最高籌碼
+    $('#highestHoldBet').text(highestHoldBet.name)
+    $('#highestPlayer').text(highestHoldBet.holdBet)
+    //點擊畫面右上跳出說明
+    $('.info').on("click",function(){  
+      showinfo()
+    })
     
+    //遊戲開始
+    gameStart()
 
     //莊家的卡
     $("body").append(`
-       <div class="cards dealer">
+       <div class="dealer-cards dealer">
         <div class="card-front"></div>
         <div class="card-back"></div>        
         </div>
@@ -226,10 +233,10 @@
     //初始化持有籌碼：1000； 與已下注籌碼：0
     $('#userBet').text(userBet)
     $('#holdBet').text(holdBet)
-    
+    //開場遊戲說明
+    showinfo()
 
     //籌碼設定，點擊籌碼圖片，進行籌碼下注
-    console.log($('.coin'));
     $('.coin').each( function(){
       $(this).on("click",function(){
         if( holdBet <  Number($(this).attr("data-coin"))) {
@@ -253,17 +260,25 @@
       }
       //結束下注階段
       betState = false;
-      alert(`目前的下注階段結束，已下注${userBet}`)
+      alert(`目前的下注階段結束，已下注${userBet}，玩家可選擇畫面上的撲克`)
       //恢復卡牌可互動
       gameCanClick('auto')
     })
     
     //下注歸零按鈕設定
     $('#betReset').on('click',function(){
-      //目前已下注歸零
-      userBet = 0;
-      //更新頁面
-      $('#userBet').text(0)
+      if( betState == false){
+        alert('完成下注後不可歸零籌碼，下次請在完成下注前歸零籌碼')
+      } else {
+        //目前已下注歸零
+        holdBet += userBet
+        userBet = 0;
+        //更新頁面
+        $('#holdBet').text(holdBet)
+        $('#userBet').text(0)
+      }
+     
+
     })
 
     //在下注階段時，為遊戲區增加 pointer-event：none 的CSS屬性
@@ -290,6 +305,46 @@
     })
  
   // -------------------- function 區--------------------  
+  //遊戲開始
+  function gameStart(){
+    $("#game").html("")
+    //重新設定籌碼
+    betState = true; //下注狀態
+    holdBet = 1000;   //目前持有籌碼
+    userBet = 0;      //本局下注籌碼
+
+    //初始化持有籌碼：1000； 與已下注籌碼：0
+    $('#userBet').text(userBet)
+    $('#holdBet').text(holdBet)
+
+       //創造16張卡片
+    for (let i = 0; i < 26; i++) {
+       $("#game").append(`
+       <div class="cards card-close">
+        <div class="card-front"></div>
+        <div class="card-back"></div>        
+        </div>
+       `)
+    }
+    //遍歷全部卡片：換圖、加屬性、打亂
+    for(let i = 0 ; i < 28 ; i++){
+      const num = i % 13 + 2
+      //將24張牌改成2組1-13 (將隨機少2張)
+      $('.cards').eq(i).find('.card-front').css('background-image',`url(./cards_img/${0+num}H.jpg)`)
+      //給圖片加上編號屬性
+      $(".cards").eq(i).attr("data-num", num);
+      //給圖片打亂
+      let random = Math.round( Math.random()*25)
+      $(".cards").eq(random).insertAfter($('.cards').eq(i))
+    }
+    //隨機移除2張卡
+    for(let j = 0 ; j < 2; j++){
+      let removeRandom =  Math.round( Math.random()*2)
+      $(".cards").eq(removeRandom).remove() ;
+      console.log('移除了一個element');
+    }
+  }
+
    //比較卡片
   function compare(choseCard){
     $('.dealer').removeClass('card-close')
@@ -298,7 +353,7 @@
       //獲勝，持有籌碼增加，獲得已下注的 2倍籌碼
       holdBet += (userBet * 2)
       //再次回到下注階段
-      betState = true
+      betState = true;
       setTimeout(()=>{
         alert(`玩家獲勝，你的卡牌點數是${ choseCard.attr("data-num")}，莊家點數是${$(".dealer").attr("data-num")}。
              獲得籌碼${(userBet * 2)}，目前持有籌碼是${holdBet}` )
@@ -309,7 +364,12 @@
       $('#holdBet').text(holdBet)
       //遊戲區不在可點擊
       gameCanClick('none')
+      
       },440)
+      if(holdBet > hightBetTemp) {
+        hightBetTemp = holdBet
+        console.log(`最高籌碼戰存已更新，值為${hightBetTemp}`);
+      }
     } else if(Number(choseCard.attr("data-num")) == Number($(".dealer").attr("data-num"))) {
       changeCard()
       //平手，返還已下注籌碼
@@ -325,6 +385,7 @@
       $('#userBet').text(userBet)
       $('#holdBet').text(holdBet)
       gameCanClick('none')
+      endGame()
       },440)
     } else {
       changeCard()
@@ -340,7 +401,10 @@
       $('#userBet').text(userBet)
       $('#holdBet').text(holdBet)
       gameCanClick('none')
+      endGame()
       },440)
+       
+      
     }
   }
   // 牌移出畫面 +  更改莊家的卡
@@ -361,16 +425,62 @@
       },500)
     },450)
     }
-  
+  //遊戲區是否可接受點擊事件
   function gameCanClick(css){
     $("#game").css('pointer-events',`${css}`)
   }
-
-
+  //遊戲流程說明文字
+  function showinfo(){
+    var str=
+    "注意：在未完成下注前，都無法點擊撲克牌翻開比大小，請先完成下注再點撲克\n" +
+    "遊戲說明：此遊戲為隨機比大小，系統隨機生成A-K的撲克24張，隨機少2張用以增加遊戲不確定性，遊玩步驟如下：\n" +
+    "步驟一: 點擊畫面上的籌碼圖片可選擇要下注多少 (註：下注籌碼不得大於目前持有籌碼)\n" +
+    "步驟二: 點擊畫面上的完成下注即完成下注，在未完成下注情況下可以重置下注，已完成下注時則不可重置\n" +
+    "步驟三: 完成下注後，可點擊遊戲區的撲克牌與莊家的撲克牌(已翻開的)比較大小，根據勝負進行籌碼變動\n" +
+    "步驟四: 若玩家勝利獲得已下注籌碼*2的獎勵，平手則返還已下注籌碼，落敗則沒收已下注籌碼\n"  + 
+    "步驟五: 重複步驟一到四，直到玩家籌碼歸零或是24張牌消完即遊戲結束\n" ;
+         
+      Swal.fire({
+        title: '遊戲流程說明',
+        html: '<pre class="align-left">' + str + '</pre>',
+        width: 1000,
+        color: '#000',
+        background: '#fff',
+        backdrop: 'rgba(0,0,0,0.99)',
+      });
+  }
 
 
    function endGame(){
-    alert('遊戲結束')
+    if(holdBet == 0 ){
+      alert('遊戲結束')
+      if(hightBetTemp > highestHoldBet.holdBet){
+        Swal.fire({
+          icon: 'info',
+          title: '遊戲結束',
+          text: `在本局遊戲你籌碼最高得到 ${hightBetTemp} `,
+          input: 'text',
+          inputPlaceholder: '請輸入玩家名字',
+          inputAttributes: {
+            required: true
+          },
+          validationMessage: '名稱必填',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          color: '#000',
+          background: '#fff',
+          backdrop: 'rgba(0,0,0,0.99)',
+        }).then(function (result) {
+          highestHoldBet.name = result.value
+          highestHoldBet.holdBet = hightBetTemp
+          $('#highestHoldBet').text(highestHoldBet.name)
+          $('#highestPlayer').text(highestHoldBet.holdBet)
+
+          localStorage.bet = JSON.stringify(highestHoldBet)
+        })
+      }
+      gameStart()
+    }
    }
    </script>
   </body>
